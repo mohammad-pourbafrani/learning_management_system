@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class LoginHistory {
+public class UserLoginHistory {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id; // SERIAL in Postgres
