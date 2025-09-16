@@ -3,9 +3,8 @@ DROP TABLE IF EXISTS users CASCADE;
 CREATE TABLE users
 (
     id         SERIAL PRIMARY KEY,
-    username   VARCHAR(50)  NOT NULL UNIQUE,
-    phone      VARCHAR(15)  NOT NULL UNIQUE,
-    email      VARCHAR(100) NOT NULL UNIQUE,
+    phone      VARCHAR(15) UNIQUE,
+    email      VARCHAR(100) UNIQUE,
     role       VARCHAR(20) DEFAULT 'student' CHECK (role IN ('admin', 'student', 'instructor')),
     password   VARCHAR(255) NOT NULL,
     enable     BOOLEAN     DEFAULT FALSE, -- for OTP verification

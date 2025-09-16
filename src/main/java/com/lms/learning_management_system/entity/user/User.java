@@ -13,7 +13,6 @@ import java.time.LocalDateTime;
 @Table(
         name = "users",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = "username"),
                 @UniqueConstraint(columnNames = "phone"),
                 @UniqueConstraint(columnNames = "email")
         }
@@ -27,13 +26,10 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY) // maps SERIAL in Postgres
     private Long id;
 
-    @Column(nullable = false, length = 50, unique = true)
-    private String username;
-
-    @Column(nullable = false, length = 15, unique = true)
+    @Column(length = 15, unique = true)
     private String phone;
 
-    @Column(nullable = false, length = 100, unique = true)
+    @Column(length = 100, unique = true)
     private String email;
 
     @Enumerated(EnumType.STRING)
