@@ -1,9 +1,15 @@
 package com.lms.learning_management_system.service.user;
 
+import com.lms.learning_management_system.dto.user.UserLoginDto;
 import com.lms.learning_management_system.dto.user.UserRegisterDto;
+import com.lms.learning_management_system.dto.user.TokenDto;
+import com.lms.learning_management_system.dto.user.UserVerifyRegisterDto;
 import com.lms.learning_management_system.entity.user.User;
+import com.lms.learning_management_system.entity.user.UserTokens;
 import com.lms.learning_management_system.exception.user.UserEssentialArgumentException;
 import com.lms.learning_management_system.exception.user.UserExistException;
+import com.lms.learning_management_system.exception.user.UserNotFoundException;
+import com.lms.learning_management_system.mapper.user.TokenMapper;
 import com.lms.learning_management_system.repository.user.UserLoginHistoryRepository;
 import com.lms.learning_management_system.repository.user.UserRepository;
 import com.lms.learning_management_system.repository.user.UserTokensRepository;
@@ -12,6 +18,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -19,18 +28,60 @@ public class UserService {
     private final UserLoginHistoryRepository userLoginHistoryRepository;
     private final UserTokensRepository userTokensRepository;
 
-    public ApiResponse<Void> register(UserRegisterDto userRegisterDto) {
-        if ((userRegisterDto.getEmail() == null || userRegisterDto.getEmail().isEmpty()) &&
-                (userRegisterDto.getPhone() == null || userRegisterDto.getPhone().isEmpty())
+    private void validateUserName(String email, String phone) {
+        if ((email == null || email.isEmpty()) &&
+                (phone == null || phone.isEmpty())
         ) {
             throw new UserEssentialArgumentException("Either phone or email must be provided");
         }
-        if (userRegisterDto.getEmail() != null && userRepository.existsByEmail(userRegisterDto.getEmail())) {
+    }
+
+    private void validateExistUserName(String email, String phone) {
+        if (email != null && userRepository.existsByEmail(email)) {
             throw new UserExistException("User with this Email already exist");
         }
-        if (userRegisterDto.getPhone() != null && userRepository.existsByPhone(userRegisterDto.getPhone())) {
+        if (phone != null && userRepository.existsByPhone(phone)) {
             throw new UserExistException("User with this Phone already exist");
         }
+    }
+
+    private User getUser(String email, String phone) {
+
+        Optional<User> user = Optional.empty();
+
+        if (email != null) {
+            user = userRepository.findUserByEmail(email);
+        }
+        if (phone != null) {
+            user = userRepository.findUserByPhone(phone);
+        }
+        if (user.isEmpty()) {
+            throw new UserNotFoundException("User not found");
+        }
+
+        return user.get();
+    }
+
+    private TokenDto getToken(User user) {
+
+        UserTokens userTokens = new UserTokens();
+
+        userTokens.setUser(user);
+        //TODO: generate access , refresh token
+        userTokens.setAccessToken("");
+        userTokens.setRefreshToken("");
+        userTokens.setAccessExpiresAt(LocalDateTime.now().plusMinutes(15));
+        userTokens.setRefreshExpiresAt(LocalDateTime.now().plusDays(5));
+        userTokensRepository.save(userTokens);
+
+       return TokenMapper.toDto(userTokens);
+    }
+
+    public ApiResponse<Void> register(UserRegisterDto userRegisterDto) {
+
+        validateUserName(userRegisterDto.getEmail(), userRegisterDto.getPhone());
+
+        validateExistUserName(userRegisterDto.getEmail(), userRegisterDto.getPhone());
 
         User user = new User();
         user.setEmail(userRegisterDto.getEmail());
@@ -39,10 +90,38 @@ public class UserService {
         user.setPassword(userRegisterDto.getPassword());
         user.setRole(userRegisterDto.getRole());
         userRepository.save(user);
-
+        //TODO: send otp for verify user
         return new ApiResponse<Void>(HttpStatus.OK.value(), "user registered successfully");
+    }
+
+    public ApiResponse<TokenDto> verifyRegisterUser(UserVerifyRegisterDto userVerifyRegisterDto) {
+
+        validateUserName(userVerifyRegisterDto.getEmail(), userVerifyRegisterDto.getPhone());
+
+        User user = getUser(userVerifyRegisterDto.getEmail(), userVerifyRegisterDto.getPhone());
+
+        //TODO:check corrected otp code
+        user.setEnable(true);
+        userRepository.save(user);
 
 
+        return new ApiResponse<TokenDto>(
+                HttpStatus.OK.value(),
+                "user verification registered successfully",
+                getToken(user));
+
+    }
+
+    public ApiResponse<TokenDto> login(UserLoginDto userLoginDto) {
+
+        validateUserName(userLoginDto.getEmail(), userLoginDto.getPhone());
+
+        User user = getUser(userLoginDto.getEmail(), userLoginDto.getPhone());
+
+        return new ApiResponse<TokenDto>(
+                HttpStatus.OK.value(),
+                "successfully logged in",
+                getToken(user));
     }
 
 }

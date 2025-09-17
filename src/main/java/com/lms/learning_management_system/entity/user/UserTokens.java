@@ -40,8 +40,11 @@ public class UserTokens {
     @Column(name = "created_at" , updatable = false , insertable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "expires_at"  , nullable = false)
-    private LocalDateTime expiresAt;
+    @Column(name = "refresh_expires_at"  , nullable = false)
+    private LocalDateTime refreshExpiresAt;
+
+    @Column(name = "access_expires_at" , nullable = false)
+    private LocalDateTime accessExpiresAt;
 
     private Boolean revoked = false;
 
