@@ -14,6 +14,8 @@ import com.lms.learning_management_system.repository.user.UserLoginHistoryReposi
 import com.lms.learning_management_system.repository.user.UserRepository;
 import com.lms.learning_management_system.repository.user.UserTokensRepository;
 import com.lms.learning_management_system.utils.ApiResponse;
+import com.lms.learning_management_system.utils.jwt.JwtUtil;
+import com.lms.learning_management_system.utils.jwt.TokenType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserLoginHistoryRepository userLoginHistoryRepository;
     private final UserTokensRepository userTokensRepository;
+    private final JwtUtil jwtUtil;
 
     private void validateUserName(String email, String phone) {
         if ((email == null || email.isEmpty()) &&
@@ -65,16 +68,25 @@ public class UserService {
     private TokenDto getToken(User user) {
 
         UserTokens userTokens = new UserTokens();
+        String token;
+        String refreshToken;
+
+        do {
+            token = jwtUtil.generateToken(user.getPhone(), user.getEmail(), user.getRole().name(), TokenType.ACCESS);
+        } while (userTokensRepository.existsByAccessToken(token));
+
+        do {
+            refreshToken = jwtUtil.generateToken(user.getPhone(), user.getEmail(), user.getRole().name(), TokenType.REFRESH);
+        } while (userTokensRepository.existsByRefreshToken(refreshToken));
 
         userTokens.setUser(user);
-        //TODO: generate access , refresh token
-        userTokens.setAccessToken("");
-        userTokens.setRefreshToken("");
+        userTokens.setAccessToken(token);
+        userTokens.setRefreshToken(refreshToken);
         userTokens.setAccessExpiresAt(LocalDateTime.now().plusMinutes(15));
         userTokens.setRefreshExpiresAt(LocalDateTime.now().plusDays(5));
         userTokensRepository.save(userTokens);
 
-       return TokenMapper.toDto(userTokens);
+        return TokenMapper.toDto(userTokens);
     }
 
     public ApiResponse<Void> register(UserRegisterDto userRegisterDto) {
