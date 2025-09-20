@@ -5,7 +5,7 @@ CREATE TABLE users
     id         SERIAL PRIMARY KEY,
     phone      VARCHAR(15) UNIQUE,
     email      VARCHAR(100) UNIQUE,
-    role       VARCHAR(20) DEFAULT 'student' CHECK (role IN ('admin', 'student', 'instructor')),
+    role       VARCHAR(20) DEFAULT 'STUDENT' CHECK (role IN ('ADMIN', 'STUDENT', 'INSTRUCTOR')),
     password   VARCHAR(255) NOT NULL,
     enable     BOOLEAN     DEFAULT FALSE, -- for OTP verification
     created_at TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
