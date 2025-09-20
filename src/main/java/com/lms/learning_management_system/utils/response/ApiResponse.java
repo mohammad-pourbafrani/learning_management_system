@@ -1,4 +1,4 @@
-package com.lms.learning_management_system.utils;
+package com.lms.learning_management_system.utils.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

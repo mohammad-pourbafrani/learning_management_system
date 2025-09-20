@@ -6,14 +6,13 @@ import com.lms.learning_management_system.dto.user.TokenDto;
 import com.lms.learning_management_system.dto.user.UserVerifyRegisterDto;
 import com.lms.learning_management_system.entity.user.User;
 import com.lms.learning_management_system.entity.user.UserTokens;
-import com.lms.learning_management_system.exception.user.UserEssentialArgumentException;
 import com.lms.learning_management_system.exception.user.UserExistException;
 import com.lms.learning_management_system.exception.user.UserNotFoundException;
 import com.lms.learning_management_system.mapper.user.TokenMapper;
 import com.lms.learning_management_system.repository.user.UserLoginHistoryRepository;
 import com.lms.learning_management_system.repository.user.UserRepository;
 import com.lms.learning_management_system.repository.user.UserTokensRepository;
-import com.lms.learning_management_system.utils.ApiResponse;
+import com.lms.learning_management_system.utils.response.ApiResponse;
 import com.lms.learning_management_system.utils.jwt.JwtUtil;
 import com.lms.learning_management_system.utils.jwt.TokenType;
 import lombok.RequiredArgsConstructor;
@@ -30,14 +29,6 @@ public class UserService {
     private final UserLoginHistoryRepository userLoginHistoryRepository;
     private final UserTokensRepository userTokensRepository;
     private final JwtUtil jwtUtil;
-
-    private void validateUserName(String email, String phone) {
-        if ((email == null || email.isEmpty()) &&
-                (phone == null || phone.isEmpty())
-        ) {
-            throw new UserEssentialArgumentException("Either phone or email must be provided");
-        }
-    }
 
     private void validateExistUserName(String email, String phone) {
         if (email != null && userRepository.existsByEmail(email)) {
@@ -91,8 +82,6 @@ public class UserService {
 
     public ApiResponse<Void> register(UserRegisterDto userRegisterDto) {
 
-        validateUserName(userRegisterDto.getEmail(), userRegisterDto.getPhone());
-
         validateExistUserName(userRegisterDto.getEmail(), userRegisterDto.getPhone());
 
         User user = new User();
@@ -107,8 +96,6 @@ public class UserService {
     }
 
     public ApiResponse<TokenDto> verifyRegisterUser(UserVerifyRegisterDto userVerifyRegisterDto) {
-
-        validateUserName(userVerifyRegisterDto.getEmail(), userVerifyRegisterDto.getPhone());
 
         User user = getUser(userVerifyRegisterDto.getEmail(), userVerifyRegisterDto.getPhone());
 
@@ -125,8 +112,6 @@ public class UserService {
     }
 
     public ApiResponse<TokenDto> login(UserLoginDto userLoginDto) {
-
-        validateUserName(userLoginDto.getEmail(), userLoginDto.getPhone());
 
         User user = getUser(userLoginDto.getEmail(), userLoginDto.getPhone());
 
