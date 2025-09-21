@@ -9,14 +9,17 @@ import com.lms.learning_management_system.entity.user.UserTokens;
 import com.lms.learning_management_system.exception.user.UserExistException;
 import com.lms.learning_management_system.exception.user.UserNotFoundException;
 import com.lms.learning_management_system.mapper.user.TokenMapper;
+import com.lms.learning_management_system.repository.RedisRepository;
 import com.lms.learning_management_system.repository.user.UserLoginHistoryRepository;
 import com.lms.learning_management_system.repository.user.UserRepository;
 import com.lms.learning_management_system.repository.user.UserTokensRepository;
+import com.lms.learning_management_system.utils.otp.OtpUtils;
 import com.lms.learning_management_system.utils.response.ApiResponse;
 import com.lms.learning_management_system.utils.jwt.JwtUtil;
 import com.lms.learning_management_system.utils.jwt.TokenType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -29,6 +32,9 @@ public class UserService {
     private final UserLoginHistoryRepository userLoginHistoryRepository;
     private final UserTokensRepository userTokensRepository;
     private final JwtUtil jwtUtil;
+    private final RedisRepository redisRepository;
+    private final OtpUtils otpUtils;
+    private final PasswordEncoder passwordEncoder;
 
     private void validateExistUserName(String email, String phone) {
         if (email != null && userRepository.existsByEmail(email)) {
@@ -80,6 +86,10 @@ public class UserService {
         return TokenMapper.toDto(userTokens);
     }
 
+    private String buildOtpKey(String email, String phone) {
+        return "otp:" + (!email.isBlank() ? email : phone);
+    }
+
     public ApiResponse<Void> register(UserRegisterDto userRegisterDto) {
 
         validateExistUserName(userRegisterDto.getEmail(), userRegisterDto.getPhone());
@@ -87,11 +97,20 @@ public class UserService {
         User user = new User();
         user.setEmail(userRegisterDto.getEmail());
         user.setPhone(userRegisterDto.getPhone());
-        //TODO: hash password
+        user.setPassword(passwordEncoder.encode(userRegisterDto.getPassword()));
         user.setPassword(userRegisterDto.getPassword());
         user.setRole(userRegisterDto.getRole());
         userRepository.save(user);
-        //TODO: send otp for verify user
+
+        String otp = otpUtils.generateOtp();
+        redisRepository.setValue(
+                buildOtpKey(userRegisterDto.getEmail(), userRegisterDto.getPhone()),
+                otp,
+                300);
+
+        //TODO: sendOtp
+        System.out.println("ottttttttp: " + otp);
+
         return new ApiResponse<Void>(HttpStatus.CREATED.value(), "user registered successfully");
     }
 
@@ -99,15 +118,19 @@ public class UserService {
 
         User user = getUser(userVerifyRegisterDto.getEmail(), userVerifyRegisterDto.getPhone());
 
-        //TODO:check corrected otp code
-        user.setEnable(true);
-        userRepository.save(user);
+        String storedOtp = redisRepository.getValue(buildOtpKey(userVerifyRegisterDto.getEmail(), userVerifyRegisterDto.getPhone()));
 
+        if (storedOtp != null && storedOtp.equals(userVerifyRegisterDto.getCode())) {
+            user.setEnable(true);
+            userRepository.save(user);
+            return new ApiResponse<>(
+                    HttpStatus.OK.value(),
+                    "user verification registered successfully",
+                    getToken(user));
+        }
 
-        return new ApiResponse<TokenDto>(
-                HttpStatus.OK.value(),
-                "user verification registered successfully",
-                getToken(user));
+        return new ApiResponse<>(HttpStatus.BAD_REQUEST.value(), "otp code not found or expire");
+
 
     }
 
@@ -115,10 +138,15 @@ public class UserService {
 
         User user = getUser(userLoginDto.getEmail(), userLoginDto.getPhone());
 
-        return new ApiResponse<TokenDto>(
-                HttpStatus.OK.value(),
-                "successfully logged in",
-                getToken(user));
+        if (passwordEncoder.matches(userLoginDto.getPassword(), user.getPassword())) {
+            return new ApiResponse<>(
+                    HttpStatus.OK.value(),
+                    "successfully logged in",
+                    getToken(user));
+        }
+
+        return new ApiResponse<>(HttpStatus.BAD_REQUEST.value(), "password not correct");
+
     }
 
 }
