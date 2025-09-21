@@ -92,7 +92,7 @@ public class UserService {
         user.setRole(userRegisterDto.getRole());
         userRepository.save(user);
         //TODO: send otp for verify user
-        return new ApiResponse<Void>(HttpStatus.OK.value(), "user registered successfully");
+        return new ApiResponse<Void>(HttpStatus.CREATED.value(), "user registered successfully");
     }
 
     public ApiResponse<TokenDto> verifyRegisterUser(UserVerifyRegisterDto userVerifyRegisterDto) {

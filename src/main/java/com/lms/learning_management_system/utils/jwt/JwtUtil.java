@@ -6,6 +6,8 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
@@ -16,8 +18,12 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class JwtUtil {
-
     private JwtProperties jwtProperties;
+
+    @Autowired
+    public JwtUtil(JwtProperties jwtProperties) {
+        this.jwtProperties = jwtProperties;
+    }
 
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(jwtProperties.getSecret().getBytes());

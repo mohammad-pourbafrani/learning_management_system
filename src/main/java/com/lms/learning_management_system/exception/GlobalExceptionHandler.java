@@ -1,11 +1,15 @@
 package com.lms.learning_management_system.exception;
 
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.lms.learning_management_system.utils.response.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+
+import java.util.Arrays;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -30,5 +34,30 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleException(Exception exception) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ApiResponse<>(HttpStatus.INTERNAL_SERVER_ERROR.value(), exception.getMessage()));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleEnumParseException(HttpMessageNotReadableException ex) {
+        Throwable cause = ex.getCause();
+        if (cause instanceof InvalidFormatException invalidFormat) {
+            if (invalidFormat.getTargetType().isEnum()) {
+                Class<?> enumType = invalidFormat.getTargetType();
+                String fieldName = invalidFormat.getPath().get(0).getFieldName();
+                Object invalidValue = invalidFormat.getValue();
+                String allowed = String.join(", ",
+                        Arrays.stream(enumType.getEnumConstants())
+                                .map(Object::toString)
+                                .toList()
+                );
+
+                String message = String.format(
+                        "Invalid value '%s' for field '%s'. Allowed values are: [%s]",
+                        invalidValue, fieldName, allowed
+                );
+
+                return ResponseEntity.badRequest().body(new ApiResponse<>(HttpStatus.BAD_REQUEST.value(), message));
+            }
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiResponse<>(HttpStatus.BAD_REQUEST.value(), "Invalid request payload"));
     }
 }
