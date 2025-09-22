@@ -38,7 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             // 1️⃣ Check token exists in DB
-            Optional<UserTokens> tokenRecord = userTokensRepository.findByToken(token);
+            Optional<UserTokens> tokenRecord = userTokensRepository.findByAccessToken(token);
             if (tokenRecord.isEmpty()) {
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token not found , please login");
                 return;

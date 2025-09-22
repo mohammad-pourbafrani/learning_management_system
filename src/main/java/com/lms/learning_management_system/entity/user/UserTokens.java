@@ -27,7 +27,7 @@ public class UserTokens {
     private Long id; // SERIAL in Postgres
 
     //relation to user(FK user_id)
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false , cascade = CascadeType.REMOVE)
     @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_user_token"))
     private User user;
 

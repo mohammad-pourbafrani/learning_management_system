@@ -1,14 +1,15 @@
-package com.lms.learning_management_system.repository;
+package com.lms.learning_management_system.service;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 
-@Repository
+@Service
 @RequiredArgsConstructor
-public class RedisRepository {
+public class RedisService {
     private final StringRedisTemplate stringRedisTemplate;
 
     public void setValue(String key, String value, long seconds) {

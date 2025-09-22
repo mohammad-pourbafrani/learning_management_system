@@ -1,15 +1,13 @@
 package com.lms.learning_management_system.service.user;
 
-import com.lms.learning_management_system.dto.user.UserLoginDto;
-import com.lms.learning_management_system.dto.user.UserRegisterDto;
-import com.lms.learning_management_system.dto.user.TokenDto;
-import com.lms.learning_management_system.dto.user.UserVerifyRegisterDto;
+import com.lms.learning_management_system.dto.user.*;
 import com.lms.learning_management_system.entity.user.User;
+import com.lms.learning_management_system.entity.user.UserLoginHistory;
 import com.lms.learning_management_system.entity.user.UserTokens;
 import com.lms.learning_management_system.exception.user.UserExistException;
 import com.lms.learning_management_system.exception.user.UserNotFoundException;
 import com.lms.learning_management_system.mapper.user.TokenMapper;
-import com.lms.learning_management_system.repository.RedisRepository;
+import com.lms.learning_management_system.service.RedisService;
 import com.lms.learning_management_system.repository.user.UserLoginHistoryRepository;
 import com.lms.learning_management_system.repository.user.UserRepository;
 import com.lms.learning_management_system.repository.user.UserTokensRepository;
@@ -17,6 +15,7 @@ import com.lms.learning_management_system.utils.otp.OtpUtils;
 import com.lms.learning_management_system.utils.response.ApiResponse;
 import com.lms.learning_management_system.utils.jwt.JwtUtil;
 import com.lms.learning_management_system.utils.jwt.TokenType;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,7 +31,7 @@ public class UserService {
     private final UserLoginHistoryRepository userLoginHistoryRepository;
     private final UserTokensRepository userTokensRepository;
     private final JwtUtil jwtUtil;
-    private final RedisRepository redisRepository;
+    private final RedisService redisService;
     private final OtpUtils otpUtils;
     private final PasswordEncoder passwordEncoder;
 
@@ -62,9 +61,10 @@ public class UserService {
         return user.get();
     }
 
-    private TokenDto getToken(User user) {
+    private TokenDto getToken(User user, UserNetworkInfoDto userNetworkInfoDto) {
 
         UserTokens userTokens = new UserTokens();
+        UserLoginHistory userLoginHistory = new UserLoginHistory();
         String token;
         String refreshToken;
 
@@ -76,12 +76,22 @@ public class UserService {
             refreshToken = jwtUtil.generateToken(user.getPhone(), user.getEmail(), user.getRole().name(), TokenType.REFRESH);
         } while (userTokensRepository.existsByRefreshToken(refreshToken));
 
+        //delete all exist tokens
+        userTokensRepository.deleteAllByUser(user);
+
+        //create new token
         userTokens.setUser(user);
         userTokens.setAccessToken(token);
         userTokens.setRefreshToken(refreshToken);
         userTokens.setAccessExpiresAt(LocalDateTime.now().plusMinutes(15));
         userTokens.setRefreshExpiresAt(LocalDateTime.now().plusDays(5));
         userTokensRepository.save(userTokens);
+
+        //insert in login history
+        userLoginHistory.setUser(user);
+        userLoginHistory.setIpAddress(userNetworkInfoDto.getIp());
+        userLoginHistory.setUserAgent(userNetworkInfoDto.getAgent());
+        userLoginHistoryRepository.save(userLoginHistory);
 
         return TokenMapper.toDto(userTokens);
     }
@@ -103,7 +113,7 @@ public class UserService {
         userRepository.save(user);
 
         String otp = otpUtils.generateOtp();
-        redisRepository.setValue(
+        redisService.setValue(
                 buildOtpKey(userRegisterDto.getEmail(), userRegisterDto.getPhone()),
                 otp,
                 300);
@@ -114,19 +124,22 @@ public class UserService {
         return new ApiResponse<Void>(HttpStatus.CREATED.value(), "user registered successfully");
     }
 
-    public ApiResponse<TokenDto> verifyRegisterUser(UserVerifyRegisterDto userVerifyRegisterDto) {
+    @Transactional
+    public ApiResponse<TokenDto> verifyRegisterUser(UserVerifyRegisterDto userVerifyRegisterDto, UserNetworkInfoDto userNetworkInfoDto) {
 
         User user = getUser(userVerifyRegisterDto.getEmail(), userVerifyRegisterDto.getPhone());
 
-        String storedOtp = redisRepository.getValue(buildOtpKey(userVerifyRegisterDto.getEmail(), userVerifyRegisterDto.getPhone()));
+        String storedOtp = redisService.getValue(buildOtpKey(userVerifyRegisterDto.getEmail(), userVerifyRegisterDto.getPhone()));
 
-        if (storedOtp != null && storedOtp.equals(userVerifyRegisterDto.getCode())) {
+        if (storedOtp != null && storedOtp.equalsIgnoreCase(userVerifyRegisterDto.getCode())) {
             user.setEnable(true);
             userRepository.save(user);
+
+            redisService.delete(buildOtpKey(userVerifyRegisterDto.getEmail(), userVerifyRegisterDto.getPhone()));
             return new ApiResponse<>(
                     HttpStatus.OK.value(),
                     "user verification registered successfully",
-                    getToken(user));
+                    getToken(user, userNetworkInfoDto));
         }
 
         return new ApiResponse<>(HttpStatus.BAD_REQUEST.value(), "otp code not found or expire");
@@ -134,7 +147,7 @@ public class UserService {
 
     }
 
-    public ApiResponse<TokenDto> login(UserLoginDto userLoginDto) {
+    public ApiResponse<TokenDto> login(UserLoginDto userLoginDto, UserNetworkInfoDto userNetworkInfoDto) {
 
         User user = getUser(userLoginDto.getEmail(), userLoginDto.getPhone());
 
@@ -142,11 +155,38 @@ public class UserService {
             return new ApiResponse<>(
                     HttpStatus.OK.value(),
                     "successfully logged in",
-                    getToken(user));
+                    getToken(user, userNetworkInfoDto));
         }
 
         return new ApiResponse<>(HttpStatus.BAD_REQUEST.value(), "password not correct");
 
+    }
+
+    public ApiResponse<Void> reSendOtpVerifyRegister(UserOtpDtos userOtpDtos) {
+
+        User user = getUser(userOtpDtos.getEmail(), userOtpDtos.getPhone());
+
+        String storedOtp = redisService.getValue(buildOtpKey(user.getEmail(), user.getPhone()));
+
+        if(user.isEnable()){
+            return  new ApiResponse<>(HttpStatus.BAD_REQUEST.value(),"user verification already done");
+        }
+
+        if (storedOtp == null) {
+            String otp = otpUtils.generateOtp();
+            redisService.setValue(
+                    buildOtpKey(userOtpDtos.getEmail(), userOtpDtos.getPhone()),
+                    otp,
+                    300);
+            //TODO: sendOtp
+            System.out.println("ottttttttp: " + otp);
+
+            return new ApiResponse<>(HttpStatus.OK.value(), "otp send again successfully");
+        }
+
+        //TODO: sendOtp
+        System.out.println("ottttttttp: " + storedOtp);
+        return new ApiResponse<>(HttpStatus.OK.value(), "otp send again successfully");
     }
 
 }

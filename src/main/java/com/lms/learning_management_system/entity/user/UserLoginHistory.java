@@ -21,21 +21,21 @@ public class UserLoginHistory {
     private Long id; // SERIAL in Postgres
 
     //relation to User (FK user_id)
-    @ManyToOne(fetch = FetchType.LAZY , optional = false)
-    @JoinColumn(name = "user_id" ,  nullable = false , foreignKey = @ForeignKey(name = "fk_user"))
-    private  User user;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false, cascade = CascadeType.REMOVE)
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_user"))
+    private User user;
 
-    @Column(name = "login_time" , updatable = false , insertable = false) // handled by DB default
+    @Column(name = "login_time", updatable = false, insertable = false) // handled by DB default
     private LocalDateTime loginTime;
 
-    @Column(name = "ip_address" , nullable = false , length = 45)
+    @Column(name = "ip_address", nullable = false, length = 45)
     private String ipAddress;
 
-    @Column(name = "user_agent" , columnDefinition = "TEXT")
-    private  String userAgent;
+    @Column(name = "user_agent", columnDefinition = "TEXT")
+    private String userAgent;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status" , nullable = false , length = 20)
+    @Column(name = "status", nullable = false, length = 20)
     private LoginStatus loginStatus = LoginStatus.SUCCESS; // default = 'success'
 
 }
