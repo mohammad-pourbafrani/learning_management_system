@@ -124,12 +124,15 @@ public class UserService {
         return new ApiResponse<Void>(HttpStatus.CREATED.value(), "user registered successfully");
     }
 
-    @Transactional
     public ApiResponse<TokenDto> verifyRegisterUser(UserVerifyRegisterDto userVerifyRegisterDto, UserNetworkInfoDto userNetworkInfoDto) {
 
         User user = getUser(userVerifyRegisterDto.getEmail(), userVerifyRegisterDto.getPhone());
 
         String storedOtp = redisService.getValue(buildOtpKey(userVerifyRegisterDto.getEmail(), userVerifyRegisterDto.getPhone()));
+
+        if (user.isEnable()) {
+            throw new UserExistException("user recently verified");
+        }
 
         if (storedOtp != null && storedOtp.equalsIgnoreCase(userVerifyRegisterDto.getCode())) {
             user.setEnable(true);
@@ -168,8 +171,8 @@ public class UserService {
 
         String storedOtp = redisService.getValue(buildOtpKey(user.getEmail(), user.getPhone()));
 
-        if(user.isEnable()){
-            return  new ApiResponse<>(HttpStatus.BAD_REQUEST.value(),"user verification already done");
+        if (user.isEnable()) {
+            return new ApiResponse<>(HttpStatus.BAD_REQUEST.value(), "user verification already done");
         }
 
         if (storedOtp == null) {
