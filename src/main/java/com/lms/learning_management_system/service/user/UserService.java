@@ -131,6 +131,10 @@ public class UserService {
 
         String storedOtp = redisService.getValue(buildOtpKey(userVerifyRegisterDto.getEmail(), userVerifyRegisterDto.getPhone()));
 
+        if (user.isEnable()) {
+            throw new UserExistException("user recently verified");
+        }
+
         if (storedOtp != null && storedOtp.equalsIgnoreCase(userVerifyRegisterDto.getCode())) {
             user.setEnable(true);
             userRepository.save(user);
