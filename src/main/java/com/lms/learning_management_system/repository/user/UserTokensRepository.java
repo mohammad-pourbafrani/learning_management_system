@@ -16,4 +16,6 @@ public interface UserTokensRepository extends JpaRepository<UserTokens,Long> {
     void deleteAllByUser(User user);
 
     Optional<UserTokens> findByAccessToken(String accessToken);
+
+    void deleteAllByUser_Id(Long userId);
 }

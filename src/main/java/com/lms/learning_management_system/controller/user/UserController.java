@@ -24,7 +24,7 @@ public class UserController {
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody UserRegisterDto userRegisterDto) {
-        return new ResponseEntity<>(userService.register(userRegisterDto), HttpStatus.CREATED);
+        return userService.register(userRegisterDto);
     }
 
     @PostMapping("/verify-register")
@@ -32,7 +32,7 @@ public class UserController {
         UserNetworkInfoDto userNetworkInfoDto = new UserNetworkInfoDto();
         userNetworkInfoDto.setIp(IpHandler.getIp(request));
         userNetworkInfoDto.setAgent(request.getHeader("User-Agent"));
-        return ResponseEntity.ok(userService.verifyRegisterUser(userVerifyRegisterDto , userNetworkInfoDto));
+        return userService.verifyRegisterUser(userVerifyRegisterDto , userNetworkInfoDto);
     }
 
     @PostMapping("/login")
@@ -40,12 +40,12 @@ public class UserController {
         UserNetworkInfoDto userNetworkInfoDto = new UserNetworkInfoDto();
         userNetworkInfoDto.setIp(IpHandler.getIp(request));
         userNetworkInfoDto.setAgent(request.getHeader("User-Agent"));
-        return ResponseEntity.ok(userService.login(userLoginDto , userNetworkInfoDto));
+        return userService.login(userLoginDto , userNetworkInfoDto);
     }
 
     @PostMapping("resend-otp-verify-register")
     public ResponseEntity<ApiResponse<Void>> reSendOtpVerifyRegister(@Valid @RequestBody UserOtpDtos userOtpDtos) {
-        return ResponseEntity.ok(userService.reSendOtpVerifyRegister(userOtpDtos));
+        return userService.reSendOtpVerifyRegister(userOtpDtos);
     }
 
 }

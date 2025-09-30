@@ -12,7 +12,7 @@ public class UserExceptionHandler {
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleUserNotFoundException(UserNotFoundException exception) {
         return new ResponseEntity<>(
-                new ApiResponse<Void>(HttpStatus.NOT_FOUND.value(), exception.getMessage()),
+                new ApiResponse<Void>(exception.getMessage()),
                 HttpStatus.NOT_FOUND
         );
     }
@@ -20,7 +20,7 @@ public class UserExceptionHandler {
     @ExceptionHandler(UserExistException.class)
     public ResponseEntity<ApiResponse<Void>> handleUserExistException(UserExistException exception) {
         return new ResponseEntity<>(
-                new ApiResponse<Void>(HttpStatus.BAD_REQUEST.value(), exception.getMessage()),
+                new ApiResponse<Void>(exception.getMessage()),
                 HttpStatus.BAD_REQUEST
         );
     }

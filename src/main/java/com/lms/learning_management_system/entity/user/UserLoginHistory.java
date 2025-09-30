@@ -21,7 +21,7 @@ public class UserLoginHistory {
     private Long id; // SERIAL in Postgres
 
     //relation to User (FK user_id)
-    @ManyToOne(fetch = FetchType.LAZY, optional = false, cascade = CascadeType.REMOVE)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_user"))
     private User user;
 
