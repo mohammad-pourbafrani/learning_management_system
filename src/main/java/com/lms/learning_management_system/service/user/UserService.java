@@ -19,6 +19,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -51,8 +52,7 @@ public class UserService {
 
         if (email != null) {
             user = userRepository.findUserByEmail(email);
-        }
-        if (phone != null) {
+        } else if (phone != null) {
             user = userRepository.findUserByPhone(phone);
         }
         if (user.isEmpty()) {
@@ -193,6 +193,24 @@ public class UserService {
         //TODO: sendOtp
         System.out.println("ottttttttp: " + storedOtp);
         return ResponseEntity.ok().body(new ApiResponse<>("otp send again successfully"));
+    }
+
+
+    @Transactional
+    public ResponseEntity<ApiResponse<Void>> changePassword(ChangePasswordDto changePasswordDto, Authentication authentication) {
+
+        User user = getUser(authentication.getName(), authentication.getName());
+
+        if (!passwordEncoder.matches(changePasswordDto.getOldPassword(), user.getPassword())) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>("Old passwords don't match"));
+        }
+
+        user.setPassword(passwordEncoder.encode(changePasswordDto.getPassword()));
+        userRepository.save(user);
+
+        userTokensRepository.deleteAllByUser(user);
+
+        return ResponseEntity.ok().body(new ApiResponse<>("password changed successfully , login again"));
     }
 
 }
