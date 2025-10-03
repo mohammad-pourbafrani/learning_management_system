@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -40,17 +41,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // 1️⃣ Check token exists in DB
             Optional<UserTokens> tokenRecord = userTokensRepository.findByAccessToken(token);
             if (tokenRecord.isEmpty()) {
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token not found , please login");
-                return;
+                request.setAttribute("authError", "Token not found , please login");
+                throw new BadCredentialsException("Token not found , please login");
             }
             //TODO:after chek a user how many try with not exist , revoke and expire token repeat non-stop for ban or ...
 
             if (tokenRecord.get().getRevoked()) {
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token revoked , please login");
-                return;
+                request.setAttribute("authError", "Token revoked , please login");
+                throw new BadCredentialsException("Token revoked , please login");
             } else if (!jwtUtil.validateToken(token)) {
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token expire , please refresh");
-                return;
+                request.setAttribute("authError", "Token expire , please refresh");
+                throw new BadCredentialsException("Token expire , please refresh");
             }
 
 
@@ -71,8 +72,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(authToken);
 
         } catch (Exception e) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired token");
-            return;
+            throw new BadCredentialsException("Invalid or expired token");
         }
 
         filterChain.doFilter(request, response);

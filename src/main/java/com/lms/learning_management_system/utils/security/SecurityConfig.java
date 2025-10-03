@@ -1,5 +1,6 @@
 package com.lms.learning_management_system.utils.security;
 
+import com.lms.learning_management_system.utils.jwt.JwtAuthenticationEntryPoint;
 import com.lms.learning_management_system.utils.jwt.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,9 +31,11 @@ public class SecurityConfig {
     };
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
     }
 
     @Bean
@@ -43,6 +46,7 @@ public class SecurityConfig {
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                         .anyRequest().authenticated()
                 )
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
