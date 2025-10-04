@@ -42,16 +42,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Optional<UserTokens> tokenRecord = userTokensRepository.findByAccessToken(token);
             if (tokenRecord.isEmpty()) {
                 request.setAttribute("authError", "Token not found , please login");
-                throw new BadCredentialsException("Token not found , please login");
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token not found , please login");
+                return;
             }
             //TODO:after chek a user how many try with not exist , revoke and expire token repeat non-stop for ban or ...
 
             if (tokenRecord.get().getRevoked()) {
                 request.setAttribute("authError", "Token revoked , please login");
-                throw new BadCredentialsException("Token revoked , please login");
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token revoked , please login");
+                return;
             } else if (!jwtUtil.validateToken(token)) {
                 request.setAttribute("authError", "Token expire , please refresh");
-                throw new BadCredentialsException("Token expire , please refresh");
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token expire , please refresh");
+                return;
             }
 
 
@@ -72,7 +75,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(authToken);
 
         } catch (Exception e) {
-            throw new BadCredentialsException("Invalid or expired token");
+            request.setAttribute("authError", "Invalid or expired token , please refresh");
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired token");
+            return;
         }
 
         filterChain.doFilter(request, response);
