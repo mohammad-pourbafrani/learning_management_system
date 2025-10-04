@@ -36,6 +36,8 @@ public class UserService {
     private final RedisService redisService;
     private final OtpUtils otpUtils;
     private final PasswordEncoder passwordEncoder;
+    private final String REGISTER_PREFIX = "register";
+    private final String FORGET_PASSWORD_PREFIX = "register";
 
     private void validateExistUserName(String email, String phone) {
         if (email != null && userRepository.existsByEmail(email)) {
@@ -97,8 +99,8 @@ public class UserService {
         return TokenMapper.toDto(userTokens);
     }
 
-    private String buildOtpKey(String email, String phone) {
-        return "otp:" + (!email.isBlank() ? email : phone);
+    private String buildOtpKey(String prefix, String email, String phone) {
+        return prefix + (!email.isBlank() ? email : phone);
     }
 
     public ResponseEntity<ApiResponse<Void>> register(UserRegisterDto userRegisterDto) {
@@ -112,9 +114,9 @@ public class UserService {
         user.setRole(userRegisterDto.getRole());
         userRepository.save(user);
 
-        String otp = otpUtils.generateOtp();
+        String otp = otpUtils.generateRegisterOtp();
         redisService.setValue(
-                buildOtpKey(userRegisterDto.getEmail(), userRegisterDto.getPhone()),
+                buildOtpKey(REGISTER_PREFIX, userRegisterDto.getEmail(), userRegisterDto.getPhone()),
                 otp,
                 300);
 
@@ -129,7 +131,7 @@ public class UserService {
 
         User user = getUser(userVerifyRegisterDto.getEmail(), userVerifyRegisterDto.getPhone());
 
-        String storedOtp = redisService.getValue(buildOtpKey(userVerifyRegisterDto.getEmail(), userVerifyRegisterDto.getPhone()));
+        String storedOtp = redisService.getValue(buildOtpKey(REGISTER_PREFIX, userVerifyRegisterDto.getEmail(), userVerifyRegisterDto.getPhone()));
 
         if (user.isEnable()) {
             throw new UserExistException("user recently verified");
@@ -139,7 +141,7 @@ public class UserService {
             user.setEnable(true);
             userRepository.save(user);
 
-            redisService.delete(buildOtpKey(userVerifyRegisterDto.getEmail(), userVerifyRegisterDto.getPhone()));
+            redisService.delete(buildOtpKey(REGISTER_PREFIX, userVerifyRegisterDto.getEmail(), userVerifyRegisterDto.getPhone()));
             return ResponseEntity.ok(new ApiResponse<>(
                     "user verification registered successfully",
                     getToken(user, userNetworkInfoDto)));
@@ -172,16 +174,16 @@ public class UserService {
 
         User user = getUser(userOtpDtos.getEmail(), userOtpDtos.getPhone());
 
-        String storedOtp = redisService.getValue(buildOtpKey(user.getEmail(), user.getPhone()));
+        String storedOtp = redisService.getValue(buildOtpKey(REGISTER_PREFIX, user.getEmail(), user.getPhone()));
 
         if (user.isEnable()) {
             return ResponseEntity.badRequest().body(new ApiResponse<>("user verification already done"));
         }
 
         if (storedOtp == null) {
-            String otp = otpUtils.generateOtp();
+            String otp = otpUtils.generateRegisterOtp();
             redisService.setValue(
-                    buildOtpKey(userOtpDtos.getEmail(), userOtpDtos.getPhone()),
+                    buildOtpKey(REGISTER_PREFIX, userOtpDtos.getEmail(), userOtpDtos.getPhone()),
                     otp,
                     300);
             //TODO: sendOtp
@@ -211,6 +213,64 @@ public class UserService {
         userTokensRepository.deleteAllByUser(user);
 
         return ResponseEntity.ok().body(new ApiResponse<>("password changed successfully , login again"));
+    }
+
+    public ResponseEntity<ApiResponse<Void>> forgetPassword(ForgetPasswordDto forgetPasswordDto) {
+        User user = getUser(forgetPasswordDto.getEmail(), forgetPasswordDto.getPhone());
+
+        String storedOtp = redisService.getValue(buildOtpKey(FORGET_PASSWORD_PREFIX, user.getEmail(), user.getPhone()));
+
+        if (storedOtp == null) {
+            String otp = otpUtils.generateForgetPasswordOtp();
+            redisService.setValue(
+                    buildOtpKey(REGISTER_PREFIX, forgetPasswordDto.getEmail(), forgetPasswordDto.getPhone()),
+                    otp,
+                    300);
+            //TODO: sendOtp
+            System.out.println("ottttttttp: " + otp);
+
+            return ResponseEntity.ok().body(new ApiResponse<>("otp send successfully"));
+        }
+
+        //TODO: sendOtp
+        System.out.println("ottttttttp: " + storedOtp);
+        return ResponseEntity.ok().body(new ApiResponse<>("otp send again successfully"));
+    }
+
+    @Transactional
+    public ResponseEntity<ApiResponse<Void>> verifyForgetPassword(VerifyForgetPasswordDto verifyForgetPasswordDto) {
+        User user = getUser(verifyForgetPasswordDto.getEmail(), verifyForgetPasswordDto.getPhone());
+
+        String storedOtp = redisService.getValue(buildOtpKey(FORGET_PASSWORD_PREFIX, user.getEmail(), user.getPhone()));
+
+        if (storedOtp != null && storedOtp.equalsIgnoreCase(verifyForgetPasswordDto.getCode())) {
+            redisService.delete(buildOtpKey(FORGET_PASSWORD_PREFIX, user.getEmail(), user.getPhone()));
+            user.setPassword(passwordEncoder.encode(verifyForgetPasswordDto.getPassword()));
+            userRepository.save(user);
+            userTokensRepository.deleteAllByUser(user);
+            return ResponseEntity.ok().body(new ApiResponse<>("password changed successfully"));
+        }
+
+        return ResponseEntity.badRequest().body(new ApiResponse<>("code not found or expire verify code"));
+    }
+
+    @Transactional
+    public ResponseEntity<ApiResponse<TokenDto>> refreshToken(RefreshTokenDto refreshTokenDto, UserNetworkInfoDto userNetworkInfoDto) {
+        Optional<UserTokens> token = userTokensRepository.findByAccessToken(refreshTokenDto.getAccessToken());
+        if (token.isEmpty()) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>("access token not found"));
+        }
+        if (token.get().getRefreshToken().equals(refreshTokenDto.getRefreshToken())) {
+            return ResponseEntity.ok().body(new ApiResponse<>("tokens is refresh successfully", getToken(token.get().getUser(), userNetworkInfoDto)));
+        }
+        return ResponseEntity.badRequest().body(new ApiResponse<>("refresh token not valid"));
+    }
+
+    @Transactional
+    public ResponseEntity<ApiResponse<Void>> logoutUser(Authentication authentication) {
+        User user = getUser(authentication.getName(), authentication.getName());
+        userTokensRepository.deleteAllByUser(user);
+        return ResponseEntity.ok().body(new ApiResponse<>("logged out successfully"));
     }
 
 }

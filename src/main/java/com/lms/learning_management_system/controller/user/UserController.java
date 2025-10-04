@@ -33,15 +33,15 @@ public class UserController {
         UserNetworkInfoDto userNetworkInfoDto = new UserNetworkInfoDto();
         userNetworkInfoDto.setIp(IpHandler.getIp(request));
         userNetworkInfoDto.setAgent(request.getHeader("User-Agent"));
-        return userService.verifyRegisterUser(userVerifyRegisterDto , userNetworkInfoDto);
+        return userService.verifyRegisterUser(userVerifyRegisterDto, userNetworkInfoDto);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<TokenDto>> login(@Valid @RequestBody UserLoginDto userLoginDto , HttpServletRequest request) {
+    public ResponseEntity<ApiResponse<TokenDto>> login(@Valid @RequestBody UserLoginDto userLoginDto, HttpServletRequest request) {
         UserNetworkInfoDto userNetworkInfoDto = new UserNetworkInfoDto();
         userNetworkInfoDto.setIp(IpHandler.getIp(request));
         userNetworkInfoDto.setAgent(request.getHeader("User-Agent"));
-        return userService.login(userLoginDto , userNetworkInfoDto);
+        return userService.login(userLoginDto, userNetworkInfoDto);
     }
 
     @PostMapping("/resend-otp-verify-register")
@@ -54,4 +54,26 @@ public class UserController {
         return userService.changePassword(changePasswordDto, authentication);
     }
 
+    @PostMapping("/forget-password")
+    public ResponseEntity<ApiResponse<Void>> forgetPassword(@Valid @RequestBody ForgetPasswordDto forgetPasswordDto) {
+        return userService.forgetPassword(forgetPasswordDto);
+    }
+
+    @PostMapping("/verify-forget-password")
+    public ResponseEntity<ApiResponse<Void>> verifyForgetPassword(@Valid @RequestBody VerifyForgetPasswordDto verifyForgetPasswordDto) {
+        return userService.verifyForgetPassword(verifyForgetPasswordDto);
+    }
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<ApiResponse<TokenDto>> refreshToken(@Valid @RequestBody RefreshTokenDto refreshTokenDto, HttpServletRequest request) {
+        UserNetworkInfoDto userNetworkInfoDto = new UserNetworkInfoDto();
+        userNetworkInfoDto.setIp(IpHandler.getIp(request));
+        userNetworkInfoDto.setAgent(request.getHeader("User-Agent"));
+        return userService.refreshToken(refreshTokenDto, userNetworkInfoDto);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(Authentication authentication) {
+        return userService.logoutUser(authentication);
+    }
 }

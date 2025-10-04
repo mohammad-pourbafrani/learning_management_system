@@ -20,6 +20,9 @@ public class SecurityConfig {
             "/api/v1/auth/verify-register",
             "/api/v1/auth/login",
             "/api/v1/auth/resend-otp-verify-register",
+            "/api/v1/auth/forget-password",
+            "/api/v1/auth/verify-forget-password",
+            "/api/v1/auth/refresh-token",
     };
 
     public static final String[] ADMIN_ENDPOINTS = {
