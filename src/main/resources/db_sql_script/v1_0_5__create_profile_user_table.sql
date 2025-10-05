@@ -1,18 +1,3 @@
-DROP TABLE IF EXISTS education_degree CASCADE;
-CREATE TABLE education_degree
-(
-    education_degree_id SERIAL PRIMARY KEY,
-    degree              VARCHAR(100)
-);
-
-
-DROP TABLE IF EXISTS education_title CASCADE;
-CREATE TABLE education_title
-(
-    education_title_id SERIAL PRIMARY KEY,
-    title              VARCHAR(100)
-);
-
 DROP TABLE IF EXISTS profile CASCADE;
 
 -- Create table
@@ -31,8 +16,8 @@ CREATE TABLE profile
     created_at          TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
     updated_at          TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_profile FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-    CONSTRAINT fk_education_degree FOREIGN KEY (education_degree_id) REFERENCES education_degree (education_degree_id) ON DELETE SET NULL,
-    CONSTRAINT fk_education_title FOREIGN KEY (education_title_id) REFERENCES education_title (education_title_id) ON DELETE SET NULL
+    CONSTRAINT fk_education_degree FOREIGN KEY (education_degree_id) REFERENCES education_degree (id) ON DELETE SET NULL,
+    CONSTRAINT fk_education_title FOREIGN KEY (education_title_id) REFERENCES education_title (id) ON DELETE SET NULL
 );
 
 --create trigger on updated_at
