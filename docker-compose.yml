@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres
+    container_name: postgresql
+    environment:
+      POSTGRES_USER: m.pourbafrani
+      POSTGRES_PASSWORD: m.pourbafrani
+      POSTGRES_DB: lms_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  redis:
+    image: redis
+    container_name: my-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - backend
+
+  app:
+    build: .
+    container_name: lms-app
+    depends_on:
+      - db
+      - redis
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/lms_db
+      SPRING_DATASOURCE_USERNAME: m.pourbafrani
+      SPRING_DATASOURCE_PASSWORD: m.pourbafrani
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+    ports:
+      - "8080:8080"
+    networks:
+      - backend
+
+networks:
+  backend:
+
+volumes:
+  postgres_data:
