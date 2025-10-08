@@ -17,6 +17,16 @@
     </appender>
 
     <!-- ============================= -->
+    <!-- Logstash TCP Appender -->
+    <!-- ============================= -->
+    <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>logstash:5000</destination> <!-- Service name from docker-compose -->
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"app_name":"${APP_NAME}","env":"prod"}</customFields>
+        </encoder>
+    </appender>
+
+    <!-- ============================= -->
     <!-- 🧾 FILE APPENDER (ALL LOGS) -->
     <!-- ============================= -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
